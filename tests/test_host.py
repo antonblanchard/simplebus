@@ -1,12 +1,13 @@
 import unittest
 
-from nmigen.sim import Simulator
+from amaranth.sim import Simulator
 
-from host import Host
-from cmd import CmdEnum
+from simplebus.host import Host
+from simplebus.simplecmd import CmdEnum
 
+from .helpers import Helpers
 
-class TestSum(unittest.TestCase):
+class TestSum(unittest.TestCase, Helpers):
     addr_width=32
     data_width=64
     bus_width=8

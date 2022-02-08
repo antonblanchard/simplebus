@@ -1,10 +1,9 @@
 import unittest
 
-from nmigen.sim import Simulator
+from amaranth.sim import Simulator
 
-from peripheral import Peripheral
-from cmd import CmdEnum
-
+from simplebus.peripheral import Peripheral
+from simplebus.simplecmd import CmdEnum
 
 class TestSum(unittest.TestCase):
     addr_width=32

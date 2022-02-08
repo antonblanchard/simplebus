@@ -1,14 +1,13 @@
 import math
 from enum import Enum, unique
-from nmigen import Elaboratable, Module, Signal, Cat
-from nmigen_soc.wishbone import Interface as WishboneInterface
-from nmigen.back import verilog
+from amaranth import Elaboratable, Module, Signal, Cat
+from amaranth_soc.wishbone import Interface as WishboneInterface
+from amaranth.back import verilog
 
-from cmd import CmdEnum
+from simplebus.simplecmd import CmdEnum
 
 #master: read/write on positive edge
 #slave read/write on negative edge
-
 
 @unique
 class StateEnum(Enum):

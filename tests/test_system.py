@@ -1,14 +1,14 @@
 import random
 import unittest
 
-from nmigen import Elaboratable, Module, Signal, Cat
-from nmigen_soc.wishbone import Interface as WishboneInterface
-from nmigen.sim import Simulator
+from amaranth import Elaboratable, Module, Signal, Cat
+from amaranth_soc.wishbone import Interface as WishboneInterface
+from amaranth.sim import Simulator
 
-from RAM import RAM
-from host import Host
-from peripheral import Peripheral
-from helpers import Helpers
+from .RAM import RAM
+from .helpers import Helpers
+from simplebus.host import Host
+from simplebus.peripheral import Peripheral
 
 
 class System(Elaboratable):

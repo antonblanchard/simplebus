@@ -20,13 +20,12 @@
 
 import math
 
-from enum import Enum, unique
+from enum import Enum, unique, IntEnum
 from amaranth import Elaboratable, Module, Signal, Cat
 from amaranth_soc.wishbone import Interface as WishboneInterface
 from amaranth.back import verilog
 
-from cmd import CmdEnum
-
+from .simplecmd import CmdEnum
 
 @unique
 class StateEnum(Enum):

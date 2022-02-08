@@ -1,7 +1,7 @@
 import math
-from nmigen import Elaboratable, Module, Memory, Signal
-from nmigen_soc.wishbone import Interface
-from nmigen.back import verilog
+from amaranth import Elaboratable, Module, Memory, Signal
+from amaranth_soc.wishbone import Interface
+from amaranth.back import verilog
 
 
 class RAM(Elaboratable, Interface):

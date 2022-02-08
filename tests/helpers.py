@@ -1,6 +1,6 @@
 import unittest
 
-from peripheral import CmdEnum
+from simplebus.simplecmd import CmdEnum
 
 class Helpers:
     def wishbone_write(self, wb, addr, data, sel=1):
