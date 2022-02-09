@@ -36,6 +36,8 @@ class TestSum(unittest.TestCase):
 
             yield
 
+            yield # Read SEL
+
             self.assertEqual((yield self.dut.wb.cyc), 1)
             self.assertEqual((yield self.dut.wb.stb), 1)
             self.assertEqual((yield self.dut.wb.adr), 0x5a5b5c50 >> 3)

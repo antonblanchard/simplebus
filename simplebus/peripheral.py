@@ -15,12 +15,13 @@ class StateEnum(Enum):
     WRITE_ADDR = 1
     READ_ADDR = 2
     WRITE_SEL = 3
-    WRITE_DATA = 4
-    WRITE_WB = 5
-    READ_WB = 6
-    READ_DATA = 7
-    READ_ACK = 8
-    WRITE_ACK = 9
+    READ_SEL = 4
+    WRITE_DATA = 5
+    WRITE_WB = 6
+    READ_WB = 7
+    READ_DATA = 8
+    READ_ACK = 9
+    WRITE_ACK = 10
 
 
 class Peripheral(Elaboratable):
@@ -107,7 +108,7 @@ class Peripheral(Elaboratable):
                 with m.If(count):
                     m.d.sync += count.eq(count - 1)
                 with m.Else():
-                    m.d.sync += state.eq(StateEnum.READ_WB)
+                    m.d.sync += state.eq(StateEnum.READ_SEL)
 
             with m.Case(StateEnum.WRITE_SEL):
                 m.d.sync += [
@@ -116,6 +117,12 @@ class Peripheral(Elaboratable):
                     count.eq(data_cycles-1),
 
                     state.eq(StateEnum.WRITE_DATA),
+                ]
+
+            with m.Case(StateEnum.READ_SEL):
+                m.d.sync += [
+                    sel.eq(self.bus_in),
+                    state.eq(StateEnum.READ_WB),
                 ]
 
             with m.Case(StateEnum.WRITE_DATA):

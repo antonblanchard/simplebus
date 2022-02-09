@@ -39,6 +39,8 @@ class System(Elaboratable):
         m.submodules.mem = mem = RAM(addr_width=self._addr_width, data_width=self._data_width, data=data)
 
         m.d.comb += [
+
+            # connect the bus together
             peripheral.bus_in.eq(host.bus_out),
             host.bus_in.eq(peripheral.bus_out),
 

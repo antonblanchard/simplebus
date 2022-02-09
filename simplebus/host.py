@@ -38,14 +38,15 @@ class StateEnum(Enum):
     READ_ADDR = 4
 
     WRITE_SEL = 5
+    READ_SEL = 6
 
-    WRITE_DATA = 6
-    READ_DATA = 7
+    WRITE_DATA = 7
+    READ_DATA = 8
 
-    WRITE_ACK = 8
-    READ_ACK = 9
+    WRITE_ACK = 9
+    READ_ACK = 10
 
-    WISHBONE_ACK = 10
+    WISHBONE_ACK = 11
 
 
 class Host(Elaboratable):
@@ -188,8 +189,8 @@ class Host(Elaboratable):
                         ]
                     with m.Else():
                         m.d.sync += [
-                            self.bus_out.eq(0),
-                            state.eq(StateEnum.READ_ACK),
+                            self.bus_out.eq(sel),
+                            state.eq(StateEnum.READ_SEL),
                         ]
 
             with m.Case(StateEnum.WRITE_SEL):
@@ -199,6 +200,15 @@ class Host(Elaboratable):
                         self.bus_out.eq(data[:self._bus_width]),
                         data.eq(data[self._bus_width:]),
                         state.eq(StateEnum.WRITE_DATA),
+                    ]
+
+            with m.Case(StateEnum.READ_SEL):
+                with m.If(clock_strobe):
+                    m.d.sync += [
+                        count.eq(data_cycles-1),
+                        self.bus_out.eq(0),
+                        data.eq(data[self._bus_width:]),
+                        state.eq(StateEnum.READ_ACK),
                     ]
 
             with m.Case(StateEnum.WRITE_DATA):
