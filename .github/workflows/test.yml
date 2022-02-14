@@ -1,0 +1,26 @@
+name: test
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 0 * * 5'
+  workflow_dispatch:
+
+jobs:
+  Unittests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: pip3 install 'git+https://github.com/amaranth-lang/amaranth.git'
+      - run: pip3 install 'git+https://github.com/amaranth-lang/amaranth-soc.git'
+      - run: python -m unittest -v
+
+  Verilog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: pip install git+https://github.com/amaranth-lang/amaranth.git#egg=amaranth[builtin-yosys]
+      - run: pip3 install 'git+https://github.com/amaranth-lang/amaranth-soc.git'
+      - run: python -m simplebus.host
+      - run: python -m simplebus.peripheral
