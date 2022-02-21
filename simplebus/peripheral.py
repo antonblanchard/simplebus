@@ -43,6 +43,7 @@ class Peripheral(Elaboratable):
         self.bus_in = Signal(bus_width)
         self.bus_out = Signal(bus_width)
         self.oe = Signal()
+        self.strobe = Signal()
 
         self.wb = WishboneInterface(addr_width=addr_width, data_width=data_width, granularity=8)
 
@@ -76,100 +77,101 @@ class Peripheral(Elaboratable):
             self.wb.we.eq(state == StateEnum.WRITE_WB),
         ]
 
-        m.d.sync += self.bus_out.eq(0)
 
-        with m.Switch(state):
-            with m.Case(StateEnum.IDLE):
-                with m.If(self.bus_in == CmdEnum.WRITE):
-                    m.d.sync += [
-                        addr.eq(0),
-                        count.eq(addr_cycles-1),
+        with m.If(self.strobe == 1):
+            m.d.sync += self.bus_out.eq(0)
+            with m.Switch(state):
+                with m.Case(StateEnum.IDLE):
+                    with m.If(self.bus_in == CmdEnum.WRITE):
+                        m.d.sync += [
+                            addr.eq(0),
+                            count.eq(addr_cycles-1),
 
-                        state.eq(StateEnum.WRITE_ADDR),
-                    ]
+                            state.eq(StateEnum.WRITE_ADDR),
+                        ]
 
-                with m.Elif(self.bus_in == CmdEnum.READ):
-                    m.d.sync += [
-                        addr.eq(0),
-                        count.eq(addr_cycles-1),
+                    with m.Elif(self.bus_in == CmdEnum.READ):
+                        m.d.sync += [
+                            addr.eq(0),
+                            count.eq(addr_cycles-1),
 
-                        state.eq(StateEnum.READ_ADDR),
-                    ]
+                            state.eq(StateEnum.READ_ADDR),
+                        ]
 
-            with m.Case(StateEnum.WRITE_ADDR):
-                m.d.sync += addr.eq(Cat(addr[self._bus_width:], self.bus_in)),
-                with m.If(count):
-                    m.d.sync += count.eq(count - 1),
-                with m.Else():
-                    m.d.sync += state.eq(StateEnum.WRITE_SEL)
+                with m.Case(StateEnum.WRITE_ADDR):
+                    m.d.sync += addr.eq(Cat(addr[self._bus_width:], self.bus_in)),
+                    with m.If(count):
+                        m.d.sync += count.eq(count - 1),
+                    with m.Else():
+                        m.d.sync += state.eq(StateEnum.WRITE_SEL)
 
-            with m.Case(StateEnum.READ_ADDR):
-                m.d.sync += addr.eq(Cat(addr[self._bus_width:], self.bus_in)),
-                with m.If(count):
-                    m.d.sync += count.eq(count - 1)
-                with m.Else():
-                    m.d.sync += state.eq(StateEnum.READ_SEL)
-
-            with m.Case(StateEnum.WRITE_SEL):
-                m.d.sync += [
-                    sel.eq(self.bus_in),
-                    data_w.eq(0),
-                    count.eq(data_cycles-1),
-
-                    state.eq(StateEnum.WRITE_DATA),
-                ]
-
-            with m.Case(StateEnum.READ_SEL):
-                m.d.sync += [
-                    sel.eq(self.bus_in),
-                    state.eq(StateEnum.READ_WB),
-                ]
-
-            with m.Case(StateEnum.WRITE_DATA):
-                m.d.sync += data_w.eq(Cat(data_w[self._bus_width:], self.bus_in)),
-                with m.If(count):
-                    m.d.sync += count.eq(count - 1)
-                with m.Else():
-                    m.d.sync += state.eq(StateEnum.WRITE_WB)
-
-            with m.Case(StateEnum.WRITE_WB):
-                with m.If(self.wb.ack == 1):
-                    m.d.sync += [
-                        self.bus_out.eq(CmdEnum.WRITE_ACK),
-
-                        state.eq(StateEnum.WRITE_ACK),
-                    ]
-
-            with m.Case(StateEnum.WRITE_ACK):
-                m.d.sync += state.eq(StateEnum.IDLE)
-
-            with m.Case(StateEnum.READ_WB):
-                with m.If(self.wb.ack == 1):
-                    m.d.sync += [
-                        self.bus_out.eq(CmdEnum.READ_ACK),
-                        data_r.eq(self.wb.dat_r),
-
-                        state.eq(StateEnum.READ_ACK),
-                    ]
-
-            with m.Case(StateEnum.READ_ACK):
-                m.d.sync += [
-                    self.bus_out.eq(data_r[:self._bus_width]),
-                    data_r.eq(data_r[self._bus_width:]),
-                    count.eq(data_cycles-1),
-
-                    state.eq(StateEnum.READ_DATA),
-                ]
-
-            with m.Case(StateEnum.READ_DATA):
-                m.d.sync += [
-                    self.bus_out.eq(data_r[:self._bus_width]),
-                    data_r.eq(data_r[self._bus_width:]),
-                ]
-                with m.If(count):
+                with m.Case(StateEnum.READ_ADDR):
+                    m.d.sync += addr.eq(Cat(addr[self._bus_width:], self.bus_in)),
+                    with m.If(count):
                         m.d.sync += count.eq(count - 1)
-                with m.Else():
+                    with m.Else():
+                        m.d.sync += state.eq(StateEnum.READ_SEL)
+
+                with m.Case(StateEnum.WRITE_SEL):
+                    m.d.sync += [
+                        sel.eq(self.bus_in),
+                        data_w.eq(0),
+                        count.eq(data_cycles-1),
+
+                        state.eq(StateEnum.WRITE_DATA),
+                    ]
+
+                with m.Case(StateEnum.READ_SEL):
+                    m.d.sync += [
+                        sel.eq(self.bus_in),
+                        state.eq(StateEnum.READ_WB),
+                    ]
+
+                with m.Case(StateEnum.WRITE_DATA):
+                    m.d.sync += data_w.eq(Cat(data_w[self._bus_width:], self.bus_in)),
+                    with m.If(count):
+                        m.d.sync += count.eq(count - 1)
+                    with m.Else():
+                        m.d.sync += state.eq(StateEnum.WRITE_WB)
+
+                with m.Case(StateEnum.WRITE_WB):
+                    with m.If(self.wb.ack == 1):
+                        m.d.sync += [
+                            self.bus_out.eq(CmdEnum.WRITE_ACK),
+
+                            state.eq(StateEnum.WRITE_ACK),
+                        ]
+
+                with m.Case(StateEnum.WRITE_ACK):
                     m.d.sync += state.eq(StateEnum.IDLE)
+
+                with m.Case(StateEnum.READ_WB):
+                    with m.If(self.wb.ack == 1):
+                        m.d.sync += [
+                            self.bus_out.eq(CmdEnum.READ_ACK),
+                            data_r.eq(self.wb.dat_r),
+
+                            state.eq(StateEnum.READ_ACK),
+                        ]
+
+                with m.Case(StateEnum.READ_ACK):
+                    m.d.sync += [
+                        self.bus_out.eq(data_r[:self._bus_width]),
+                        data_r.eq(data_r[self._bus_width:]),
+                        count.eq(data_cycles-1),
+
+                        state.eq(StateEnum.READ_DATA),
+                    ]
+
+                with m.Case(StateEnum.READ_DATA):
+                    m.d.sync += [
+                        self.bus_out.eq(data_r[:self._bus_width]),
+                        data_r.eq(data_r[self._bus_width:]),
+                    ]
+                    with m.If(count):
+                            m.d.sync += count.eq(count - 1)
+                    with m.Else():
+                        m.d.sync += state.eq(StateEnum.IDLE)
 
         return m
 

@@ -18,11 +18,19 @@ class TestSum(unittest.TestCase, Helpers):
     addr_cycles = addr_width//bus_width
     data_cycles = data_width//bus_width
 
+    def clock_wait(self, num):
+        for i in range(num):
+             while (yield self.dut.clk_strobe) == 0:
+                 yield
+             yield
+
     def setUp(self):
         self.dut = Host(addr_width=self.addr_width, data_width=self.data_width, bus_width=self.bus_width, divisor=self.divisor)
 
     def test_host_write(self):
         def bench():
+            yield
+            
             self.assertEqual((yield self.dut.wb.stall), 1)
             self.assertEqual((yield self.dut.wb.ack), 0)
             self.assertEqual((yield self.dut.bus_out), 0)
@@ -34,10 +42,9 @@ class TestSum(unittest.TestCase, Helpers):
             yield self.dut.wb.stb.eq(1)
             yield self.dut.wb.we.eq(1)
 
-            yield
+            yield from self.clock_wait(1)
             # I'm not sure why we need two yields to go from setting synchronous values,
             # clocking one cycle and then reading values
-            yield
 
             self.assertEqual((yield self.dut.wb.ack), 0)
             self.assertEqual((yield self.dut.wb.stall), 1)
@@ -45,33 +52,30 @@ class TestSum(unittest.TestCase, Helpers):
 
             addr = 0
             for i in range(self.addr_cycles):
-                yield
+                yield from self.clock_wait(1)
                 val = (yield self.dut.bus_out)
                 addr = addr | (val << (i * 8))
 
             self.assertEqual(addr, 0xDDC0FFE8)
 
-            yield
+            yield from self.clock_wait(1)
 
             # SEL
             self.assertEqual((yield self.dut.bus_out), 0xff)
 
             data = 0
             for i in range(self.data_cycles):
-                yield
+                yield from self.clock_wait(1)
                 val = (yield self.dut.bus_out)
                 data = data | (val << (i * 8))
 
             self.assertEqual(data, 0x0123456789ABCDEF)
 
-            for i in range(self.command_delay_cycles):
-                yield
+            yield from self.clock_wait(self.command_delay_cycles)
 
             yield self.dut.bus_in.eq(CmdEnum.WRITE_ACK)
 
-            yield
-            # Two yields again
-            yield
+            yield from self.clock_wait(1)
 
             self.assertEqual((yield self.dut.wb.ack), 1)
             self.assertEqual((yield self.dut.wb.stall), 0)
@@ -80,7 +84,7 @@ class TestSum(unittest.TestCase, Helpers):
             yield self.dut.wb.stb.eq(0)
             yield self.dut.wb.we.eq(0)
 
-            yield
+            yield from self.clock_wait(1)
 
             self.assertEqual((yield self.dut.wb.ack), 0)
             self.assertEqual((yield self.dut.wb.stall), 1)
@@ -94,6 +98,8 @@ class TestSum(unittest.TestCase, Helpers):
 
     def test_host_read(self):
         def bench():
+            yield
+
             self.assertEqual((yield self.dut.wb.stall), 1)
             self.assertEqual((yield self.dut.wb.ack), 0)
             self.assertEqual((yield self.dut.bus_out), 0)
@@ -102,10 +108,7 @@ class TestSum(unittest.TestCase, Helpers):
             yield self.dut.wb.cyc.eq(1)
             yield self.dut.wb.stb.eq(1)
 
-            yield
-            # I'm not sure why we need two yields to go from setting synchronous values,
-            # clocking one cycle and then reading values
-            yield
+            yield from self.clock_wait(1)
 
             self.assertEqual((yield self.dut.wb.ack), 0)
             self.assertEqual((yield self.dut.wb.stall), 1)
@@ -113,26 +116,23 @@ class TestSum(unittest.TestCase, Helpers):
 
             addr = 0
             for i in range(self.addr_cycles):
-                yield
+                yield from self.clock_wait(1)
                 val = (yield self.dut.bus_out)
                 addr = addr | (val << (i * 8))
 
             self.assertEqual(addr, 0x53782138)
 
-            for i in range(self.command_delay_cycles):
-                yield
+            yield from self.clock_wait(self.command_delay_cycles)
 
             yield self.dut.bus_in.eq(CmdEnum.READ_ACK)
 
             data = 0x1188229933AA44BB
             for i in range(self.data_cycles):
-                yield
+                yield from self.clock_wait(1)
                 yield self.dut.bus_in.eq(data & 0xff)
                 data = data >> 8
 
-            yield
-            yield
-            yield
+            yield from self.clock_wait(3)
 
             self.assertEqual((yield self.dut.wb.dat_r), 0x1188229933AA44BB)
 

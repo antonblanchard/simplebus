@@ -19,6 +19,8 @@ class TestSum(unittest.TestCase):
     def test_peripheral(self):
         def bench_read():
             yield self.dut.wb.ack.eq(0)
+            yield self.dut.strobe.eq(1)
+
             self.assertEqual((yield self.dut.wb.cyc), 0)
             self.assertEqual((yield self.dut.wb.stb), 0)
 
@@ -71,6 +73,7 @@ class TestSum(unittest.TestCase):
             sim.run()
 
         def bench_write():
+            yield self.dut.strobe.eq(1)
             yield self.dut.wb.ack.eq(0)
             self.assertEqual((yield self.dut.wb.cyc), 0)
             self.assertEqual((yield self.dut.wb.stb), 0)

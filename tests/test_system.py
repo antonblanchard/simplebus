@@ -42,6 +42,7 @@ class System(Elaboratable):
 
             # connect the bus together
             peripheral.bus_in.eq(host.bus_out),
+            peripheral.strobe.eq(host.clk_strobe),
             host.bus_in.eq(peripheral.bus_out),
 
             self.wb.connect(host.wb),

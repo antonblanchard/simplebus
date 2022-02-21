@@ -67,11 +67,15 @@ class Host(Elaboratable):
         self.bus_out = Signal(bus_width)
         self.parity_out = Signal()
 
-        # FIXME
-        self.oe = Signal()
-
-        # FIXME
         self.clk_out = Signal()
+        self.clk_strobe = Signal()
+
+        # have something configure this.
+        # clock divisor
+        #   0 -> /2
+        #   1 -> /4
+        #   2 -> /8
+        self.clock_divisor = Signal(3, reset=1)
 
         self.wb = WishboneInterface(addr_width=addr_width, data_width=data_width, granularity=8, features=["stall"])
 
@@ -86,16 +90,40 @@ class Host(Elaboratable):
 
         # Clock divider
         clock_counter = Signal(8)
-        clock_divisor = Signal(8, reset=1)
+        clock_reset = Signal(8)
 
+        m.d.comb += clock_reset.eq((1 << (self.clock_divisor + 1)))
         with m.If(clock_counter == 0):
-            m.d.sync += clock_counter.eq(clock_divisor - 1)
+            m.d.sync += clock_counter.eq(clock_reset - 1)
         with m.Else():
             m.d.sync += clock_counter.eq(clock_counter - 1)
+
+        # just grab one bit of our divider as the clock output
+        # ideally we'd write this like this but aramanth doesn't support it
+        # m.d.comb += self.clk_out.eq(clock_counter[self.clock_divisor])
+        # FIXME this is an unsafe clock mux. Will be glitchy when switching
+        with m.Switch(self.clock_divisor):
+            with m.Case(0):
+                m.d.comb += self.clk_out.eq(clock_counter[0]) # FIXME self.clock_divisor
+            with m.Case(1):
+                m.d.comb += self.clk_out.eq(clock_counter[1]) # FIXME self.clock_divisor
+            with m.Case(2):
+                m.d.comb += self.clk_out.eq(clock_counter[2]) # FIXME self.clock_divisor
+            with m.Case(3):
+                m.d.comb += self.clk_out.eq(clock_counter[3]) # FIXME self.clock_divisor
+            with m.Case(4):
+                m.d.comb += self.clk_out.eq(clock_counter[4]) # FIXME self.clock_divisor
+            with m.Case(5):
+                m.d.comb += self.clk_out.eq(clock_counter[5]) # FIXME self.clock_divisor
+            with m.Case(6):
+                m.d.comb += self.clk_out.eq(clock_counter[6]) # FIXME self.clock_divisor
+            with m.Default():
+                m.d.comb += self.clk_out.eq(clock_counter[7])
 
         # True for 1 cycle every external bus period
         clock_strobe = Signal()
         m.d.comb += clock_strobe.eq(clock_counter == 0)
+        m.d.comb += self.clk_strobe.eq(clock_strobe)
 
         addr = Signal(self._addr_width, reset_less=True)
         data = Signal(self._data_width, reset_less=True)
@@ -269,4 +297,4 @@ class Host(Elaboratable):
 if __name__ == "__main__":
     top = Host(addr_width=32, data_width=64, bus_width=8)
     with open("host.v", "w") as f:
-        f.write(verilog.convert(top, ports=[top.bus_in, top.parity_in, top.bus_out, top.parity_out, top.oe, top.wb.adr, top.wb.dat_w, top.wb.dat_r, top.wb.sel, top.wb.cyc, top.wb.stb, top.wb.we, top.wb.ack, top.wb.stall], name="host_top", strip_internal_attrs=True))
+        f.write(verilog.convert(top, ports=[top.bus_in, top.parity_in, top.bus_out, top.parity_out, top.clock_divisor , top.wb.adr, top.wb.dat_w, top.wb.dat_r, top.wb.sel, top.wb.cyc, top.wb.stb, top.wb.we, top.wb.ack, top.wb.stall], name="host_top", strip_internal_attrs=True))
