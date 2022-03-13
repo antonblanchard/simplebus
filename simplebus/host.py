@@ -90,13 +90,7 @@ class Host(Elaboratable):
 
         # Clock divider
         clock_counter = Signal(8)
-        clock_reset = Signal(8)
-
-        m.d.comb += clock_reset.eq((1 << (self.clock_divisor + 1)))
-        with m.If(clock_counter == 0):
-            m.d.sync += clock_counter.eq(clock_reset - 1)
-        with m.Else():
-            m.d.sync += clock_counter.eq(clock_counter - 1)
+        m.d.sync += clock_counter.eq(clock_counter + 1)
 
         # just grab one bit of our divider as the clock output
         # ideally we'd write this like this but aramanth doesn't support it
@@ -120,9 +114,14 @@ class Host(Elaboratable):
             with m.Default():
                 m.d.comb += self.clk_out.eq(clock_counter[7])
 
-        # True for 1 cycle every external bus period
+        prev_clk = Signal()
+        m.d.sync += prev_clk.eq(self.clk_out)
+
+        # True for 1 cycle every external bus period, used to advance internal state machine
         clock_strobe = Signal()
-        m.d.comb += clock_strobe.eq(clock_counter == 0)
+        m.d.comb += clock_strobe.eq(~prev_clk & self.clk_out)
+
+        # Remove test case reliance on this
         m.d.comb += self.clk_strobe.eq(clock_strobe)
 
         addr = Signal(self._addr_width, reset_less=True)
