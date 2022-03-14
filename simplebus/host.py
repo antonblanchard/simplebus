@@ -23,6 +23,9 @@ import math
 from enum import Enum, unique, IntEnum
 from amaranth import Elaboratable, Module, Signal, Cat
 from amaranth_soc.wishbone import Interface as WishboneInterface
+from amaranth_soc.csr import Element as CSRElement
+from amaranth_soc.csr import Multiplexer as CSRMultiplexer
+from amaranth_soc.csr.wishbone import WishboneCSRBridge
 from amaranth.back import verilog
 
 from .simplecmd import CmdEnum
@@ -77,7 +80,9 @@ class Host(Elaboratable):
         #   2 -> /8
         self.clock_divisor = Signal(3, reset=1)
 
+        # addr_width looks wrong
         self.wb = WishboneInterface(addr_width=addr_width, data_width=data_width, granularity=8, features=["stall"])
+        self.wb_ctrl = WishboneInterface(addr_width=30, data_width=32, granularity=8)
 
     def wb_adr_to_addr(self, adr):
         wb_shift = int(math.log2(self._data_width // 8))
@@ -87,6 +92,10 @@ class Host(Elaboratable):
 
     def elaborate(self, platform):
         self.m = m = Module()
+
+        # status and control registers
+        config = Signal(32)
+        status = Signal(32)
 
         # Clock divider
         clock_counter = Signal(8)
@@ -275,9 +284,33 @@ class Host(Elaboratable):
 
         m.d.comb += self.parity_out.eq(self.bus_out.xor())
 
+        # Connect status and control registers to wishbone
+        config_csr = CSRElement(32, "rw")
+        status_csr = CSRElement(32, "rw")
+
+        m.submodules.mux = mux = CSRMultiplexer(addr_width=2, data_width=32)
+        mux.add(config_csr)
+        mux.add(status_csr)
+
+        m.submodules.bridge = bridge = WishboneCSRBridge(mux.bus)
+
+        m.d.comb += self.wb_ctrl.connect(bridge.wb_bus)
+
+        # Reads always connected to their respective CSR
+        m.d.comb += [
+            config_csr.r_data.eq(config),
+            status_csr.r_data.eq(status),
+        ]
+
+        # Write when the respective write strobe is high
+        with m.If(config_csr.w_stb):
+            m.d.sync += config.eq(config_csr.w_data)
+        with m.If(status_csr.w_stb):
+            m.d.sync += status.eq(status_csr.w_data)
+
         return m
 
 if __name__ == "__main__":
     top = Host(addr_width=32, data_width=64, bus_width=8)
     with open("host.v", "w") as f:
-        f.write(verilog.convert(top, ports=[top.bus_in, top.parity_in, top.bus_out, top.parity_out, top.clock_divisor , top.wb.adr, top.wb.dat_w, top.wb.dat_r, top.wb.sel, top.wb.cyc, top.wb.stb, top.wb.we, top.wb.ack, top.wb.stall], name="host_top", strip_internal_attrs=True))
+        f.write(verilog.convert(top, ports=[top.clk_out, top.bus_in, top.parity_in, top.bus_out, top.parity_out, top.clock_divisor, top.wb.adr, top.wb.dat_w, top.wb.dat_r, top.wb.sel, top.wb.cyc, top.wb.stb, top.wb.we, top.wb.ack, top.wb.stall, top.wb_ctrl.adr, top.wb_ctrl.dat_w, top.wb_ctrl.dat_r, top.wb_ctrl.sel, top.wb_ctrl.cyc, top.wb_ctrl.stb, top.wb_ctrl.we, top.wb_ctrl.ack], name="host_top", strip_internal_attrs=True))
