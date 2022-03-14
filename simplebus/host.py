@@ -93,26 +93,10 @@ class Host(Elaboratable):
         m.d.sync += clock_counter.eq(clock_counter + 1)
 
         # just grab one bit of our divider as the clock output
-        # ideally we'd write this like this but aramanth doesn't support it
-        # m.d.comb += self.clk_out.eq(clock_counter[self.clock_divisor])
         # FIXME this is an unsafe clock mux. Will be glitchy when switching
-        with m.Switch(self.clock_divisor):
-            with m.Case(0):
-                m.d.comb += self.clk_out.eq(clock_counter[0]) # FIXME self.clock_divisor
-            with m.Case(1):
-                m.d.comb += self.clk_out.eq(clock_counter[1]) # FIXME self.clock_divisor
-            with m.Case(2):
-                m.d.comb += self.clk_out.eq(clock_counter[2]) # FIXME self.clock_divisor
-            with m.Case(3):
-                m.d.comb += self.clk_out.eq(clock_counter[3]) # FIXME self.clock_divisor
-            with m.Case(4):
-                m.d.comb += self.clk_out.eq(clock_counter[4]) # FIXME self.clock_divisor
-            with m.Case(5):
-                m.d.comb += self.clk_out.eq(clock_counter[5]) # FIXME self.clock_divisor
-            with m.Case(6):
-                m.d.comb += self.clk_out.eq(clock_counter[6]) # FIXME self.clock_divisor
-            with m.Default():
-                m.d.comb += self.clk_out.eq(clock_counter[7])
+        for i in range(8):
+            with m.If(self.clock_divisor == i):
+                m.d.comb += self.clk_out.eq(clock_counter[i])
 
         prev_clk = Signal()
         m.d.sync += prev_clk.eq(self.clk_out)
