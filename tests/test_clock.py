@@ -4,7 +4,9 @@ from amaranth.sim import Simulator
 
 from simplebus.host import Host
 
-class Test(unittest.TestCase):
+from .helpers import Helpers
+
+class Test(unittest.TestCase, Helpers):
     addr_width=32
     data_width=64
     bus_width=8
@@ -15,7 +17,8 @@ class Test(unittest.TestCase):
     def test_clock(self):
         def bench_clock():
             for i in range(8):
-                yield self.dut.clock_divisor.eq(i)
+
+                yield from self.wishbone_write(self.dut.wb_ctrl, 0, i, 0xf)
 
                 # align to start of clock cycle
                 while (yield self.dut.clk_out) == 0:

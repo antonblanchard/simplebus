@@ -1,6 +1,3 @@
-# clock divider needs to be implemented, and use that to drive state machine
-# and also drive clk_out
-#
 # Needs to check parity and recover if possible (eg retry)
 #
 # Do we need a timeout and recover?
@@ -73,13 +70,6 @@ class Host(Elaboratable):
         self.clk_out = Signal()
         self.clk_strobe = Signal()
 
-        # have something configure this.
-        # clock divisor
-        #   0 -> /2
-        #   1 -> /4
-        #   2 -> /8
-        self.clock_divisor = Signal(3, reset=1)
-
         # addr_width looks wrong
         self.wb = WishboneInterface(addr_width=addr_width, data_width=data_width, granularity=8, features=["stall"])
         self.wb_ctrl = WishboneInterface(addr_width=30, data_width=32, granularity=8)
@@ -94,8 +84,12 @@ class Host(Elaboratable):
         self.m = m = Module()
 
         # status and control registers
-        config = Signal(32)
+        config = Signal(32, reset=self._divisor)
         status = Signal(32)
+
+        # Bottom 3 bits of config register is clock divisor
+        clock_divisor = Signal(3)
+        m.d.comb += clock_divisor.eq(config[0:3])
 
         # Clock divider
         clock_counter = Signal(8)
@@ -104,7 +98,7 @@ class Host(Elaboratable):
         # just grab one bit of our divider as the clock output
         # FIXME this is an unsafe clock mux. Will be glitchy when switching
         for i in range(8):
-            with m.If(self.clock_divisor == i):
+            with m.If(clock_divisor == i):
                 m.d.comb += self.clk_out.eq(clock_counter[i])
 
         prev_clk = Signal()
@@ -313,4 +307,4 @@ class Host(Elaboratable):
 if __name__ == "__main__":
     top = Host(addr_width=32, data_width=64, bus_width=8)
     with open("host.v", "w") as f:
-        f.write(verilog.convert(top, ports=[top.clk_out, top.bus_in, top.parity_in, top.bus_out, top.parity_out, top.clock_divisor, top.wb.adr, top.wb.dat_w, top.wb.dat_r, top.wb.sel, top.wb.cyc, top.wb.stb, top.wb.we, top.wb.ack, top.wb.stall, top.wb_ctrl.adr, top.wb_ctrl.dat_w, top.wb_ctrl.dat_r, top.wb_ctrl.sel, top.wb_ctrl.cyc, top.wb_ctrl.stb, top.wb_ctrl.we, top.wb_ctrl.ack], name="host_top", strip_internal_attrs=True))
+        f.write(verilog.convert(top, ports=[top.clk_out, top.bus_in, top.parity_in, top.bus_out, top.parity_out, top.wb.adr, top.wb.dat_w, top.wb.dat_r, top.wb.sel, top.wb.cyc, top.wb.stb, top.wb.we, top.wb.ack, top.wb.stall, top.wb_ctrl.adr, top.wb_ctrl.dat_w, top.wb_ctrl.dat_r, top.wb_ctrl.sel, top.wb_ctrl.cyc, top.wb_ctrl.stb, top.wb_ctrl.we, top.wb_ctrl.ack], name="host_top", strip_internal_attrs=True))
