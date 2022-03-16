@@ -279,7 +279,7 @@ class Host(Elaboratable):
                     state.eq(StateEnum.IDLE),
                 ]
 
-        m.d.comb += self.parity_out.eq(self.bus_out.xor())
+        m.d.comb += self.parity_out.eq(~self.bus_out.xor())
 
         # Connect status and control registers to wishbone
         config_csr = CSRElement(32, "rw")
