@@ -178,5 +178,5 @@ class Peripheral(Elaboratable):
 
 if __name__ == "__main__":
     top = Peripheral(addr_width=32, data_width=64, bus_width=8)
-    with open("peripheral.v", "w") as f:
-        f.write(verilog.convert(top, ports=[top.bus_in, top.bus_out, top.oe, top.wb.adr, top.wb.dat_w, top.wb.dat_r, top.wb.sel, top.wb.cyc, top.wb.stb, top.wb.we, top.wb.ack], name="peripheral_top", strip_internal_attrs=True))
+    with open("simplebus_peripheral.v", "w") as f:
+        f.write(verilog.convert(top, ports=[top.bus_in, top.bus_out, top.oe, top.wb.adr, top.wb.dat_w, top.wb.dat_r, top.wb.sel, top.wb.cyc, top.wb.stb, top.wb.we, top.wb.ack], name="simplebus_peripheral", strip_internal_attrs=True))

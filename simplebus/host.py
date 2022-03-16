@@ -309,5 +309,5 @@ class Host(Elaboratable):
 
 if __name__ == "__main__":
     top = Host(addr_width=32, data_width=64, bus_width=8)
-    with open("host.v", "w") as f:
-        f.write(verilog.convert(top, ports=[top.clk_out, top.bus_in, top.parity_in, top.bus_out, top.parity_out, top.wb.adr, top.wb.dat_w, top.wb.dat_r, top.wb.sel, top.wb.cyc, top.wb.stb, top.wb.we, top.wb.ack, top.wb.stall, top.wb_ctrl.adr, top.wb_ctrl.dat_w, top.wb_ctrl.dat_r, top.wb_ctrl.sel, top.wb_ctrl.cyc, top.wb_ctrl.stb, top.wb_ctrl.we, top.wb_ctrl.ack], name="host_top", strip_internal_attrs=True))
+    with open("simplebus_host.v", "w") as f:
+        f.write(verilog.convert(top, ports=[top.clk_out, top.bus_in, top.parity_in, top.bus_out, top.parity_out, top.wb.adr, top.wb.dat_w, top.wb.dat_r, top.wb.sel, top.wb.cyc, top.wb.stb, top.wb.we, top.wb.ack, top.wb.stall, top.wb_ctrl.adr, top.wb_ctrl.dat_w, top.wb_ctrl.dat_r, top.wb_ctrl.sel, top.wb_ctrl.cyc, top.wb_ctrl.stb, top.wb_ctrl.we, top.wb_ctrl.ack], name="simplebus_host", strip_internal_attrs=True))

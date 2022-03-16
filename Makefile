@@ -1,9 +1,9 @@
-all : host.v peripheral.v check
+all : simplebus_host.v simplebus_peripheral.v check
 
-host.v: simplebus/*.py
+simplebus_host.v: simplebus/*.py
 	python -m simplebus.host
 
-peripheral.v: simplebus/*.py
+simplebus_peripheral.v: simplebus/*.py
 	python -m simplebus.peripheral
 
 check: test_host_read.vcd test_host_write.vcd test_read.vcd test_system_read.vcd test_system.vcd test_write.vcd
