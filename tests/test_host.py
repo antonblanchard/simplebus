@@ -31,7 +31,7 @@ class TestSum(unittest.TestCase, Helpers):
         def bench():
             yield
             
-            self.assertEqual((yield self.dut.wb.stall), 1)
+            self.assertEqual((yield self.dut.wb.stall), 0)
             self.assertEqual((yield self.dut.wb.ack), 0)
             self.assertEqual((yield self.dut.bus_out), 0)
 
@@ -43,8 +43,6 @@ class TestSum(unittest.TestCase, Helpers):
             yield self.dut.wb.we.eq(1)
 
             yield from self.clock_wait(1)
-            # I'm not sure why we need two yields to go from setting synchronous values,
-            # clocking one cycle and then reading values
 
             self.assertEqual((yield self.dut.wb.ack), 0)
             self.assertEqual((yield self.dut.wb.stall), 1)
@@ -87,7 +85,7 @@ class TestSum(unittest.TestCase, Helpers):
             yield from self.clock_wait(1)
 
             self.assertEqual((yield self.dut.wb.ack), 0)
-            self.assertEqual((yield self.dut.wb.stall), 1)
+            self.assertEqual((yield self.dut.wb.stall), 0)
 
 
         sim = Simulator(self.dut)
@@ -100,7 +98,7 @@ class TestSum(unittest.TestCase, Helpers):
         def bench():
             yield
 
-            self.assertEqual((yield self.dut.wb.stall), 1)
+            self.assertEqual((yield self.dut.wb.stall), 0)
             self.assertEqual((yield self.dut.wb.ack), 0)
             self.assertEqual((yield self.dut.bus_out), 0)
 
@@ -132,32 +130,20 @@ class TestSum(unittest.TestCase, Helpers):
                 yield self.dut.bus_in.eq(data & 0xff)
                 data = data >> 8
 
-            yield from self.clock_wait(3)
+            yield from self.clock_wait(2)
 
             self.assertEqual((yield self.dut.wb.dat_r), 0x1188229933AA44BB)
+            self.assertEqual((yield self.dut.wb.ack), 1)
+            self.assertEqual((yield self.dut.wb.stall), 0)
 
-#            self.assertEqual(data, 0x0123456789ABCDEF)
-#
-#            for i in range(self.command_delay_cycles):
-#                yield
-#
-#            yield self.dut.bus_in.eq(CmdEnum.WRITE_ACK)
-#
-#            yield
-#            # Two yields again
-#            yield
-#
-#            self.assertEqual((yield self.dut.wb.ack), 1)
-#            self.assertEqual((yield self.dut.wb.stall), 0)
-#
-#            yield self.dut.wb.cyc.eq(0)
-#            yield self.dut.wb.stb.eq(0)
-#            yield self.dut.wb.we.eq(0)
-#
-#            yield
-#
-#            self.assertEqual((yield self.dut.wb.ack), 0)
-#            self.assertEqual((yield self.dut.wb.stall), 1)
+            yield self.dut.wb.cyc.eq(0)
+            yield self.dut.wb.stb.eq(0)
+            yield self.dut.wb.we.eq(0)
+
+            yield from self.clock_wait(1)
+
+            self.assertEqual((yield self.dut.wb.ack), 0)
+            self.assertEqual((yield self.dut.wb.stall), 0)
 
 
         sim = Simulator(self.dut)
