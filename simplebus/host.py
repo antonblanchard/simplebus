@@ -73,9 +73,10 @@ class Host(Elaboratable):
         self.enabled = Signal()
 
         adjusted_width = addr_width - math.ceil(math.log2(data_width//8))
-        # Fixme - expose this as explicit signals
         self.wb = WishboneInterface(addr_width=adjusted_width, data_width=data_width, granularity=8, features=["stall"])
         self.wb_ctrl = WishboneInterface(addr_width=30, data_width=32, granularity=8)
+        # It seems like we can't create a WishboneCSRBridge with a stall
+        # signal. Create it as a separate signal
         self.wb_ctrl_stall = Signal()
 
     def wb_adr_to_addr(self, adr):
@@ -319,7 +320,85 @@ class Host(Elaboratable):
 
         return m
 
+
+# Expose the wishbones as individual signals
+class HostWrapper(Elaboratable):
+    def __init__(self, addr_width=32, data_width=64, bus_width=8, divisor=1):
+        self._addr_width=addr_width
+        self._data_width=data_width
+        self._bus_width=bus_width
+        self._divisor=divisor
+
+        self.bus_in = Signal(bus_width)
+        self.parity_in = Signal()
+        self.bus_out = Signal(bus_width)
+        self.parity_out = Signal()
+
+        self.clk_out = Signal()
+        self.enabled = Signal()
+
+        sel_width = data_width//8
+        adjusted_addr_width = addr_width - math.ceil(math.log2(sel_width))
+
+        self.wb_adr = Signal(adjusted_addr_width)
+        self.wb_dat_w = Signal(data_width)
+        self.wb_dat_r = Signal(data_width)
+        self.wb_sel = Signal(sel_width)
+        self.wb_cyc = Signal()
+        self.wb_stb = Signal()
+        self.wb_we = Signal()
+        self.wb_ack = Signal()
+        self.wb_stall = Signal()
+
+        self.wb_ctrl_adr = Signal(30)
+        self.wb_ctrl_dat_w = Signal(32)
+        self.wb_ctrl_dat_r = Signal(32)
+        self.wb_ctrl_sel = Signal(4)
+        self.wb_ctrl_cyc = Signal()
+        self.wb_ctrl_stb = Signal()
+        self.wb_ctrl_we = Signal()
+        self.wb_ctrl_ack = Signal()
+        self.wb_ctrl_stall = Signal()
+
+    def elaborate(self, platform):
+        self.m = m = Module()
+
+        m.submodules.mux = h = Host(addr_width=self._addr_width, data_width=self._data_width, bus_width=self._bus_width, divisor=self._divisor)
+
+        m.d.comb += [
+            h.bus_in.eq(self.bus_in),
+            h.parity_in.eq(self.parity_in),
+            self.bus_out.eq(h.bus_out),
+            self.parity_out.eq(h.parity_out),
+
+            self.clk_out.eq(h.clk_out),
+            self.enabled.eq(h.enabled),
+
+            h.wb.adr.eq(self.wb_adr),
+            h.wb.dat_w.eq(self.wb_dat_w),
+            h.wb.sel.eq(self.wb_sel),
+            h.wb.cyc.eq(self.wb_cyc),
+            h.wb.stb.eq(self.wb_stb),
+            h.wb.we.eq(self.wb_we),
+            self.wb_dat_r.eq(h.wb.dat_r),
+            self.wb_ack.eq(h.wb.ack),
+            self.wb_stall.eq(h.wb.stall),
+
+            h.wb_ctrl.adr.eq(self.wb_ctrl_adr),
+            h.wb_ctrl.dat_w.eq(self.wb_ctrl_dat_w),
+            h.wb_ctrl.sel.eq(self.wb_ctrl_sel),
+            h.wb_ctrl.cyc.eq(self.wb_ctrl_cyc),
+            h.wb_ctrl.stb.eq(self.wb_ctrl_stb),
+            h.wb_ctrl.we.eq(self.wb_ctrl_we),
+            self.wb_ctrl_dat_r.eq(h.wb_ctrl.dat_r),
+            self.wb_ctrl_ack.eq(h.wb_ctrl.ack),
+            self.wb_ctrl_stall.eq(h.wb_ctrl_stall),
+        ]
+
+        return m
+
+
 if __name__ == "__main__":
-    top = Host(addr_width=32, data_width=64, bus_width=8)
+    top = HostWrapper(addr_width=32, data_width=64, bus_width=8)
     with open("simplebus_host.v", "w") as f:
-        f.write(verilog.convert(top, ports=[top.clk_out, top.bus_in, top.parity_in, top.bus_out, top.parity_out, top.enabled, top.wb.adr, top.wb.dat_w, top.wb.dat_r, top.wb.sel, top.wb.cyc, top.wb.stb, top.wb.we, top.wb.ack, top.wb.stall, top.wb_ctrl.adr, top.wb_ctrl.dat_w, top.wb_ctrl.dat_r, top.wb_ctrl.sel, top.wb_ctrl.cyc, top.wb_ctrl.stb, top.wb_ctrl.we, top.wb_ctrl.ack, top.wb_ctrl_stall], name="simplebus_host", strip_internal_attrs=True))
+        f.write(verilog.convert(top, ports=[top.clk_out, top.bus_in, top.parity_in, top.bus_out, top.parity_out, top.enabled, top.wb_adr, top.wb_dat_w, top.wb_dat_r, top.wb_sel, top.wb_cyc, top.wb_stb, top.wb_we, top.wb_ack, top.wb_stall, top.wb_ctrl_adr, top.wb_ctrl_dat_w, top.wb_ctrl_dat_r, top.wb_ctrl_sel, top.wb_ctrl_cyc, top.wb_ctrl_stb, top.wb_ctrl_we, top.wb_ctrl_ack, top.wb_ctrl_stall], name="simplebus_host", strip_internal_attrs=True))
