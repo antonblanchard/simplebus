@@ -70,8 +70,8 @@ class Host(Elaboratable):
         self.clk_out = Signal()
         self.clk_strobe = Signal()
 
-        # addr_width looks wrong
-        self.wb = WishboneInterface(addr_width=addr_width, data_width=data_width, granularity=8, features=["stall"])
+        adjusted_width = addr_width - math.ceil(math.log2(data_width//8))
+        self.wb = WishboneInterface(addr_width=adjusted_width, data_width=data_width, granularity=8, features=["stall"])
         self.wb_ctrl = WishboneInterface(addr_width=30, data_width=32, granularity=8)
 
     def wb_adr_to_addr(self, adr):
