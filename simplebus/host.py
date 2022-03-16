@@ -131,7 +131,10 @@ class Host(Elaboratable):
         ]
 
         # Disable wishbone pipelining
-        m.d.comb += self.wb.stall.eq(~self.wb.ack)
+        with m.If(self.wb.cyc == 0):
+            m.d.comb += self.wb.stall.eq(0)
+        with m.Else():
+            m.d.comb += self.wb.stall.eq(~self.wb.ack)
 
         state = Signal(StateEnum, reset=StateEnum.IDLE)
 
