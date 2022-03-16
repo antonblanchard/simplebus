@@ -70,9 +70,13 @@ class Host(Elaboratable):
         self.clk_out = Signal()
         self.clk_strobe = Signal()
 
+        self.enabled = Signal()
+
         adjusted_width = addr_width - math.ceil(math.log2(data_width//8))
+        # Fixme - expose this as explicit signals
         self.wb = WishboneInterface(addr_width=adjusted_width, data_width=data_width, granularity=8, features=["stall"])
         self.wb_ctrl = WishboneInterface(addr_width=30, data_width=32, granularity=8)
+        self.wb_ctrl_stall = Signal()
 
     def wb_adr_to_addr(self, adr):
         wb_shift = int(math.log2(self._data_width // 8))
@@ -87,9 +91,12 @@ class Host(Elaboratable):
         config = Signal(32, reset=self._divisor)
         status = Signal(32)
 
-        # Bottom 3 bits of config register is clock divisor
+        # bits 0-2 of config register for clock divisor
         clock_divisor = Signal(3)
         m.d.comb += clock_divisor.eq(config[0:3])
+
+        # bit 3 of config register for enable
+        m.d.comb += self.enabled.eq(config[3])
 
         # Clock divider
         clock_counter = Signal(8)
@@ -135,6 +142,11 @@ class Host(Elaboratable):
             m.d.comb += self.wb.stall.eq(0)
         with m.Else():
             m.d.comb += self.wb.stall.eq(~self.wb.ack)
+
+        with m.If(self.wb_ctrl.cyc == 0):
+            m.d.comb += self.wb_ctrl_stall.eq(0)
+        with m.Else():
+            m.d.comb += self.wb_ctrl_stall.eq(~self.wb_ctrl.ack)
 
         state = Signal(StateEnum, reset=StateEnum.IDLE)
 
@@ -285,7 +297,7 @@ class Host(Elaboratable):
         config_csr = CSRElement(32, "rw")
         status_csr = CSRElement(32, "rw")
 
-        m.submodules.mux = mux = CSRMultiplexer(addr_width=2, data_width=32)
+        m.submodules.mux = mux = CSRMultiplexer(addr_width=1, data_width=32)
         mux.add(config_csr)
         mux.add(status_csr)
 
@@ -310,4 +322,4 @@ class Host(Elaboratable):
 if __name__ == "__main__":
     top = Host(addr_width=32, data_width=64, bus_width=8)
     with open("simplebus_host.v", "w") as f:
-        f.write(verilog.convert(top, ports=[top.clk_out, top.bus_in, top.parity_in, top.bus_out, top.parity_out, top.wb.adr, top.wb.dat_w, top.wb.dat_r, top.wb.sel, top.wb.cyc, top.wb.stb, top.wb.we, top.wb.ack, top.wb.stall, top.wb_ctrl.adr, top.wb_ctrl.dat_w, top.wb_ctrl.dat_r, top.wb_ctrl.sel, top.wb_ctrl.cyc, top.wb_ctrl.stb, top.wb_ctrl.we, top.wb_ctrl.ack], name="simplebus_host", strip_internal_attrs=True))
+        f.write(verilog.convert(top, ports=[top.clk_out, top.bus_in, top.parity_in, top.bus_out, top.parity_out, top.enabled, top.wb.adr, top.wb.dat_w, top.wb.dat_r, top.wb.sel, top.wb.cyc, top.wb.stb, top.wb.we, top.wb.ack, top.wb.stall, top.wb_ctrl.adr, top.wb_ctrl.dat_w, top.wb_ctrl.dat_r, top.wb_ctrl.sel, top.wb_ctrl.cyc, top.wb_ctrl.stb, top.wb_ctrl.we, top.wb_ctrl.ack, top.wb_ctrl_stall], name="simplebus_host", strip_internal_attrs=True))
